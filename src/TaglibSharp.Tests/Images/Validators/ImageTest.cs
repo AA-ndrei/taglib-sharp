@@ -5,7 +5,7 @@ using NUnit.Framework;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
-
+using SixLabors.ImageSharp.PixelFormats;
 using TagLib;
 
 namespace TaglibSharp.Tests.Images.Validators
@@ -146,9 +146,13 @@ namespace TaglibSharp.Tests.Images.Validators
 				// TODO, ImageSharp doesn't support tiff yet (4/25/2020): https://github.com/SixLabors/ImageSharp/issues/12
 				md5Sum = "";// Utils.Md5Encode (v.Data);
 			} else {
-				using var image = Image.Load (v.Data);
-				image.TryGetSinglePixelSpan (out var span);
-				byte[] result = MemoryMarshal.AsBytes (span).ToArray ();
+				//using var image = Image.Load (v.Data);
+				//image.TryGetSinglePixelSpan (out var span);
+				//byte[] result = MemoryMarshal.AsBytes (span).ToArray ();
+				//md5Sum = Utils.Md5Encode (result);
+				using var image = Image.Load<Rgba64> (v.Data);
+				var pixelSpan = image.GetPixelSpan ();
+				byte[] result = MemoryMarshal.AsBytes (pixelSpan).ToArray ();
 				md5Sum = Utils.Md5Encode (result);
 			}
 
@@ -198,5 +202,16 @@ namespace TaglibSharp.Tests.Images.Validators
 		///    Setting this to null disables write testing.
 		/// </summary>
 		public IMetadataModificationValidator ModificationValidator { get; set; }
+	}
+
+	public static class Extensions
+	{
+		public static Span<T> GetPixelSpan<T> (this Image<T> imageRef) where T : unmanaged, IPixel<T>
+		{
+			var memoryFootprint = new T[imageRef.Width * imageRef.Height];
+			var pixelSpan = new Span<T> (memoryFootprint);
+			imageRef.CopyPixelDataTo (pixelSpan);
+			return pixelSpan;
+		}
 	}
 }
